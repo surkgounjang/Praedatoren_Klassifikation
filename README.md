@@ -16,8 +16,3 @@ Das Projekt basiert auf **Python 3.10. 19**. Folgende Bibliotheken werden benöt
 * `Pillow` (Bildmanipulation)
 * `numpy` (Numerische Operationen)
 * `tqdm` (Fortschrittsbalken - optional, aber empfohlen)
-
-Installieren Sie die Abhängigkeiten mit:
-
-```bash
-pip install -r requirements.txt
