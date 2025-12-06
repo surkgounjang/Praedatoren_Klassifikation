@@ -1,0 +1,35 @@
+name: Run All Python Files
+on: [push] # wenn git push
+jobs:
+  python-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    # Python einrichten
+    - name: Set Up Python
+      uses: actions/setup-python@v
+      with:
+        python-version: '3.10.19'
+
+    #Alle .py Dateien ausführen
+    - name: Run Python Scripts
+      run: |
+        echo "Suche nach .py Dateien..."
+        for file in *.py; do
+          if [ -f "$file" ]; then
+            echo "--------------------------------"
+            echo "▶ Starte $file ..."
+            python "$file"
+          fi
+        done
+
+    # 3. Success Message
+    - name: Success Message
+      if: success()
+      run: |
+        echo "✅ Alles hat funktioniert!"
+
+    # 4. Failure Message
+    - name: Failure Message
+      if: failure()   
+      run: echo "❌ Achtung! Es gab einen Fehler!"
