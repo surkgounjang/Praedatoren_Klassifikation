@@ -23,14 +23,15 @@ Update: 08.01. 2026 (Fix Class Imbalance)
 Integration von Class Weights, um das Ungleichgewicht der Daten (z.B.viele Fuchs, wenig Dachs) auszugleichen.
 """
 
-import os # für Betriebssystem-Operationen (z.B. Dateipfade)
+import os # Für Betriebssystem-Operationen (z.B. Dateipfade)
 import numpy as np # für numerische Berechnungen
 import tensorflow as tf # tensorflow Version: 2.20.0
-from tensorflow.keras import layers, optimizers, callbacks # Keras-Komponenten
+import keras
+from keras import layers, optimizers, callbacks # Keras-Komponenten
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.utils import class_weight # Für die Berechnung der Klassengewichte
-from tensorflow.keras.preprocessing import image_dataset_from_directory
+from keras.utils import image_dataset_from_directory
 
 # ===== Einstellung
 current_dir = os.path.dirname(os.path.abspath(__file__))
