@@ -33,7 +33,9 @@ from sklearn.utils import class_weight # Für die Berechnung der Klassengewichte
 from tensorflow.keras.preprocessing import image_dataset_from_directory
 
 # ===== Einstellung
-DATA_DIR = '/home/surkgoun/nabu-project/nabu_split' # Pfad zum Trainingsdatensatz
+current_dir = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(current_dir, 'nabu_split')# Pfad zum Trainingsdatensatz
+
 # Legt die Bildgröße fest (Standard: 224x224 Pixel)
 IMG_SIZE = (224, 224)
 # Bestimmt die Anzahl der Bilder, die pro Traingsschritt verarbeitet werden
