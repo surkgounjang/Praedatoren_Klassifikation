@@ -8,11 +8,18 @@ import matplotlib.pyplot as plt
 # Konfiguration
 # =====
 
-# Definiert den Pfad zur trainierten Modelldatei (.keras Format)
-MODEL_PATH = '/home/surkgoun/nabu-project/model/20260112/final_nabu_resnet_20260112(1).keras'
+# Aktuelles Verzeichnis des Skripts (z.B. '03_evaluation')
+current_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Definiert den Pfad zum Ordner mit den Validierung
-VALIDATION_DIR = '/home/surkgoun/nabu-project/5_nabu_split_/nabu_split_2/validation'
+#  Definiert den Pfad zur trainierten Modelldatei
+MODEL_PATH = os.path.join(current_dir, '../model/20260112/final_nabu_resnet_20260112(1).keras')
+
+# Definiert den Pfad zum Ordner mit der Validierung
+VALIDATION_DIR = os.path.join(current_dir, '../nabu_split/validation')
+
+# Ausgabeordner für die Ergebnisse (wird im Projektordner erstellt)
+OUTPUT_DIR = os.path.join(current_dir, '../evaluation/')
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Legt die Höhe der Bilder fest, die das Modell erwartet (224 Pixel)
 IMG_HEIGHT = 224
