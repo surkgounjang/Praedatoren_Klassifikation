@@ -31,9 +31,10 @@ ROOT/
 │   ├── 02_training/          # Modelltraining
 │   └── 03_evaluation/        # Qualitätskontrolle
 │   └── 04_deployment/
+│        └── logo.jpg         # NABU-logo
 ├── evaluation/               # Analyse-Reports (Confusion Matrix, Visualisierungen)
 ├── Dockerfile
-├── logo.jpg
+├── logo.jpg                  # NABU-logo
 ├── requirements-dev.txt      # Notwendige Bibliotheken für Preprocessing und Machine Learning
 └── requirements.txt          # Erforderlich für die Installation von Streamlit (Deployment)
 
