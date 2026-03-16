@@ -8,10 +8,10 @@ import cv2
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # 2. Pfad zum Ordner mit den Originalbildern (Raw Data)
-input_folder = os.path.join(current_dir, 'nabu_urdaten/nabu/Upload_Praedatoren/Sturmmöwe/Graswarder_2025_T533_Srp/')
+input_folder = os.path.join(current_dir, '../../data/processed/fuchs/')
 
 # 3. Pfad zum Speicherordner für die bearbeiteten Bilder
-output_folder = os.path.join(current_dir, 'nabu_bereinigt/sturmmoewe/')
+output_folder = os.path.join(current_dir, '../../data/final/fuchs/')
 
 # Sicherstellen, dass der Ausgabeordner existiert (Error-Prävention)
 os.makedirs(output_folder, exist_ok=True)

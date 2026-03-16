@@ -22,8 +22,8 @@ import argparse
 import sys
 
 # Standard-Einstellung
-DEFAULT_INPUT = 'nabu_regrouped'
-DEFAULT_OUTPUT = 'nabu_split'
+DEFAULT_INPUT = os.path.join(os.path.dirname(__file__), '../../data/final/')
+DEFAULT_OUTPUT = os.path.join(os.path.dirname(__file__), '../../data/nabu_split/')
 
 TRAIN_RATIO = 0.8 # Train (80%)
 TEST_RATIO = 0.1 # Test (10%)
