@@ -1,4 +1,4 @@
-## Bildbasierte Erkennung von Prädatoren von Nestern.
+# Bildbasierte Erkennung von Prädatoren von Nestern.
 
 <div align="justify">
 Dieses Repository enthält eine Pipeline zur effizienten Filterung und Vorverarbeitung von Bilddaten der NABU-Wildkameras. Das Hauptziel ist es, die optimalen Frames aus Serienaufnahmen (Bursts) zu extrahieren und störende Metadaten-Bereiche zu entfernen, um einen hochwertigen Trainingsdatensatz für die Wildtierklassifikation zu erstellen.
