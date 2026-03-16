@@ -10,8 +10,7 @@ korrekt geladen werden können.
 """
 
 import os
-import tensorflow as tf
-from tensorflow import keras # Importiere Keras für High-Level-API
+import keras # Importiere Keras für High-Level-API
 import numpy as np # Für Array-Operationen im shuffle-Check
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -53,7 +52,7 @@ def sanity_check():
     try:
         print(f"Prüfe Modell-Integrität... ({MODEL_PATH})")
         # Lade das Modell mit Keras
-        model =tf.keras.models.load_model(MODEL_PATH)
+        model = keras.models.load_model(MODEL_PATH)
         print("Sanity Check: Modell erfolgreich geladen.") # Erwarteter Output
 
         # Überprüfe die erwartete Eingabeform (Input Shape) des Modells
@@ -87,7 +86,7 @@ def sanity_check():
 
     try:
         # Erstelle das Dataset aus dem Verzeichnis
-        val_ds = tf.keras.utils.image_dataset_from_directory(
+        val_ds = keras.utils.image_dataset_from_directory(
             val_dir,                    # Pfad zum Validierungsordner
             image_size = IMG_SIZE,      # Bildgröße (224x224 Pixel) ohne 3 RGB
             batch_size = BATCH_SIZE,    # Batch-Größe

@@ -9,7 +9,7 @@ Es hebt schwache Klassen (F1-Score < 0.80) hervor.
 """
 
 import os
-import tensorflow as tf
+import keras
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report
@@ -54,7 +54,7 @@ def run_statistical_analysis():
     # Laden des trainierten Keras-Modells
     print(f"Lade Modell: {MODEL_PATH}")
     try:
-        model = tf.keras.models.load_model(MODEL_PATH)
+        model = keras.models.load_model(MODEL_PATH)
         print("Modell erfolgreich geladen.")
     except Exception as e:
         print(f"Fehler beim Laden des Modells: {e}")
@@ -67,7 +67,7 @@ def run_statistical_analysis():
 
     # Laden des Validierungsdatensatzes
     print(f"Lade Validierungsdatensatz: {DATA_DIR}")
-    val_ds = tf.keras.utils.image_dataset_from_directory(
+    val_ds = keras.utils.image_dataset_from_directory(
         DATA_DIR,
         image_size = IMG_SIZE,
         batch_size = BATCH_SIZE,

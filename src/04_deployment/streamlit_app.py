@@ -1,7 +1,7 @@
 import io
 import os
 import streamlit as st
-import tensorflow as tf
+import keras
 import pandas as pd  # excel
 import numpy as np
 from PIL import Image  # pillow-Bibliothek für die Bildverarbeitung (öffnen, resizing)
@@ -70,11 +70,11 @@ st.markdown("""
 
     /* --- CUSTOM SECTION HEADER (Überschriften) --- */
     .custom-header {
-        background-color: #F4F8FB; 
+        background-color: #F4F8FB;
         border-left: 5px solid #009EE3; /* NABU Blau */
         padding: 12px 15px;
-        border-radius: 0 8px 8px 0; 
-        color: #193256; 
+        border-radius: 0 8px 8px 0;
+        color: #193256;
         font-size: 18px;
         font-weight: 700;
         margin-bottom: 15px;
@@ -93,17 +93,17 @@ st.markdown("""
 
     /* --- BUTTON-DESIGN --- */
     div.stButton > button {
-        background-color: #009EE3; 
-        color: white; 
-        border-radius: 8px; 
-        font-weight: bold; 
-        width: 100%; 
-        border: none; 
-        padding: 12px; 
-        transition: 0.2s; 
+        background-color: #009EE3;
+        color: white;
+        border-radius: 8px;
+        font-weight: bold;
+        width: 100%;
+        border: none;
+        padding: 12px;
+        transition: 0.2s;
     }
-    div.stButton > button:hover { 
-        background-color: #0077AA; 
+    div.stButton > button:hover {
+        background-color: #0077AA;
     }
 
     div.stButton > button[kind="primary"] {
@@ -165,7 +165,7 @@ CLASS_NAMES = [
 @st.cache_resource
 def load_model():
     try:
-        return tf.keras.models.load_model(MODEL_PATH)
+        return keras.models.load_model(MODEL_PATH)
     except Exception as e:
         st.error(f"Fehler beim Laden des Modells: {e}")
         return None
@@ -319,7 +319,7 @@ def page_home():
 
         /* Willkommens-Überschrift (Links) - Bleibt NABU-Grün */
         .welcome-title {
-            font-size: 2.8rem; 
+            font-size: 2.8rem;
             font-weight: 900;
             color: #009640 !important; /* NABU Green */
             margin-bottom: 20px;
@@ -350,7 +350,7 @@ def page_home():
             color: var(--text-color) !important;
 
             /* Rahmen: Neutrales, halb-transparentes Grau für bessere Sichtbarkeit */
-            border: 1px solid #a0a0a080 !important; 
+            border: 1px solid #a0a0a080 !important;
 
             padding: 6px 14px;
             border-radius: 4px;
@@ -460,7 +460,7 @@ def page_home():
             <div class="feature-item">
                 <span class="feature-name">📷  Einzelbild-Analyse</span>
                 <span class="feature-desc">
-                    Laden Sie ein einzelnes Foto hoch, um das Ergebnis sofort zu überprüfen. 
+                    Laden Sie ein einzelnes Foto hoch, um das Ergebnis sofort zu überprüfen.
                     Ideal für schnelle Tests.
                 </span>
             </div>
@@ -468,7 +468,7 @@ def page_home():
             <div class="feature-item">
                 <span class="feature-name">📂  Batch-Modus</span>
                 <span class="feature-desc">
-                    Analysieren Sie komplette Ordnerinhalte (z.B. SD-Karten). 
+                    Analysieren Sie komplette Ordnerinhalte (z.B. SD-Karten).
                     Leere Bilder werden gefiltert und Ergebnisse als Excel exportiert.
                 </span>
             </div>
@@ -643,22 +643,22 @@ def page_single_analysis():
 
                     st.markdown(f"""
                                         <div style="
-                                            background-color: #e0e0e0; 
-                                            border-radius: 15px; 
-                                            height: 30px; 
+                                            background-color: #e0e0e0;
+                                            border-radius: 15px;
+                                            height: 30px;
                                             width: 100%;
                                             margin-bottom: 20px;
                                             overflow: hidden;
                                         ">
                                             <div style="
-                                                width: {score_pct}%; 
-                                                background-color: {bar_color}; 
-                                                height: 100%; 
-                                                border-radius: 15px; 
-                                                text-align: right; 
-                                                line-height: 30px; 
-                                                padding-right: 15px; 
-                                                color: white; 
+                                                width: {score_pct}%;
+                                                background-color: {bar_color};
+                                                height: 100%;
+                                                border-radius: 15px;
+                                                text-align: right;
+                                                line-height: 30px;
+                                                padding-right: 15px;
+                                                color: white;
                                                 font-weight: bold;
                                                 font-family: sans-serif;
                                                 white-space: nowrap;

@@ -1,7 +1,7 @@
 import os
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.preprocessing import image_dataset_from_directory
+import keras
+from keras.preprocessing import image_dataset_from_directory
 import matplotlib.pyplot as plt
 
 # =====
@@ -140,10 +140,10 @@ def run_phase_4_statik_check(model, dataset):
     print("-" * 60)
 
     # Initialisiert die Metrik für Top-1
-    top1_acc = tf.keras.metrics.CategoricalAccuracy(name = 'top1')
+    top1_acc = keras.metrics.CategoricalAccuracy(name = 'top1')
 
     # Initialisiert die Metrik für Top-3
-    top3_acc = tf.keras.metrics.TopKCategoricalAccuracy(k = 3, name = 'top3')
+    top3_acc = keras.metrics.TopKCategoricalAccuracy(k = 3, name = 'top3')
 
     # Gibt eine Nachricht aus
     print("Berechne Top-1 und Top-3 über alle Daten...")
@@ -197,7 +197,7 @@ def main():
     print(f"Lade Modell von {MODEL_PATH}")
 
     # Lädt das Keras-Modell
-    model = tf.keras.models.load_model(MODEL_PATH)
+    model = keras.models.load_model(MODEL_PATH)
 
     # --- Schritt 2: Validierungsdaten laden ---
 
