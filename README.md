@@ -14,7 +14,7 @@ Dieses Repository enthält eine Pipeline zur effizienten Filterung und Vorverarb
 <br></br>
 Ohne diese manuelle Konsolidierung der Daten kann die Pipeline die Bilder nicht korrekt zuordnen oder verarbeiten.
 </div>
-
+<img width="601" height="434" alt="Bildschirmfoto vom 2026-03-16 14-17-35" src="https://github.com/user-attachments/assets/d35fc8eb-c4fe-4d6c-8bda-b2f534405e3f" />
 
 ## $\color{blue}{Verzeichnisstruktur}$
 <div align="justify">
