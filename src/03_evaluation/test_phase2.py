@@ -34,6 +34,8 @@ BATCH_SIZE = 32
 THRESHOLD_F1 = 0.80
 # Ausgabeordner für die Ergebnisse
 OUTPUT_DIR = os.path.join(current_dir, '../evaluation/')
+# Sicherstellen, dass der Ausgabeordner existiert (Error-Prävention)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 # =====
 
 def run_statistical_analysis():
