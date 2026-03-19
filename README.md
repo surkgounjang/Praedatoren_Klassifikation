@@ -8,7 +8,7 @@ Alle Skripte arbeiten mit relativen Pfaden und setzen die folgende Standard-Stru
 
 ``` plain
 ROOT/
-├── data/                     # nicht im Repository enthalten
+├┈┈ data/                     # nicht im Repository enthalten
 │   └── raw/                  # Originalbilder vom NABU nach Tierart sortiert
 │       ├── austernfischer/   # Bilder der Tierart Austernfischer ohne weitere Unterverzeichnisse
 │       ├── fuchs/            # Bilder der Tierart Fuchs ohne weitere Unterverzeichnisse
@@ -20,7 +20,8 @@ ROOT/
 │   ├── 03_evaluation/        # Qualitätskontrolle
 │   └── 04_deployment/
 │        └── logo.jpg         # NABU-logo
-├── evaluation/               # nicht im Repository enthalten, Output für Analyse-Reports
+├┈┈ evaluation/               # nicht im Repository enthalten, Output für Analyse-Reports
+├┈┈ models/                   # nicht im Repository enthalten, Output für Training
 ├── Dockerfile
 ├── logo.jpg                  # NABU-logo
 ├── requirements-dev.txt      # Notwendige Bibliotheken für Preprocessing und Machine Learning
