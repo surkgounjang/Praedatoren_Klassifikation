@@ -4,41 +4,35 @@
 Dieses Repository enthält eine Pipeline zur effizienten Filterung und Vorverarbeitung von Bilddaten der NABU-Wildkameras. Das Hauptziel ist es, die optimalen Frames aus Serienaufnahmen (Bursts) zu extrahieren und störende Metadaten-Bereiche zu entfernen, um einen hochwertigen Trainingsdatensatz für die Wildtierklassifikation zu erstellen.
 </div>
 
-## **$\color{red}{Wichtiger Hinweis zur Datenvorbereitung (Manuelle Sortierung)}$**
-<div align="justify">
-<b>ACHTUNG:</b> Die von NABU bereitgestellten Originalbilder sind unstrukturiert und enthalten oft tief verschachtelte Unterordner (Ordner innerhalb von Ordnern). Da die Pipeline eine klare Struktur erwartet, müssen die Daten <b>zwingend manuell</b> vorbereitet werden:
-<br></br>
-1. Überprüfen Sie alle Unterordner der Rohdaten gründlich.<br></br>
-2. Erstellen Sie für jede Tierart (Spezies) einen eigenen, eindeutig benannten Ordner innerhalb von <code>data/raw/</code>. <br></br>
-3. Sortieren Sie alle relevanten Bilder manuell in diese artspezifischen Ordner ein.
-<br></br>
-Ohne diese manuelle Konsolidierung der Daten kann die Pipeline die Bilder nicht korrekt zuordnen oder verarbeiten.
-</div>
-<img width="601" height="434" alt="Bildschirmfoto vom 2026-03-16 14-17-35" src="https://github.com/user-attachments/assets/d35fc8eb-c4fe-4d6c-8bda-b2f534405e3f" />
-
 ## $\color{blue}{Verzeichnisstruktur}$
 <div align="justify">
-Alle Skripte arbeiten mit relativen Pfaden und setzen die folgende Standard-Struktur voraus. Der Ordner data/raw/ muss manuell erstellt und mit Daten gefüllt werden; alle anderen Verzeichnisse werden bei Bedarf automatisch von den Skripten generiert.
+Alle Skripte arbeiten mit relativen Pfaden und setzen die folgende Standard-Struktur voraus.
 </div>
 <br></br>
 
 ```
 ROOT/
-├── data/
-│   ├── raw/                  # Input: Originalbilder vom NABU
+├── data/                     # nicht im Repository enthalten
+│   └── raw/                  # Originalbilder vom NABU nach Tierart sortiert
+│       ├── austernfischer/   # Bilder der Tierart Austernfischer ohne weitere Unterverzeichnisse
+│       ├── fuchs/            # Bilder der Tierart Fuchs ohne weitere Unterverzeichnisse
+│       ┊   ...               # weitere Tierarten
+│       └── steinwaelzer/     # Bilder der Tierart Steinwaelzer ohne weitere Unterverzeichnisse
 ├── src/
 │   ├── 01_preprocessing/     # Vorverarbeitung
 │   ├── 02_training/          # Modelltraining
-│   └── 03_evaluation/        # Qualitätskontrolle
+│   ├── 03_evaluation/        # Qualitätskontrolle
 │   └── 04_deployment/
 │        └── logo.jpg         # NABU-logo
-├── evaluation/               # Analyse-Reports (Confusion Matrix, Visualisierungen)
+├── evaluation/               # nicht im Repository enthalten, Output für Analyse-Reports
 ├── Dockerfile
 ├── logo.jpg                  # NABU-logo
 ├── requirements-dev.txt      # Notwendige Bibliotheken für Preprocessing und Machine Learning
 └── requirements.txt          # Erforderlich für die Installation von Streamlit (Deployment)
 
 ```
+
+Die Bilddaten, die für dieses Projekt benötigt werden, sind nicht öffentlich verfügbar und nur für Projektangehörige zugänglich. Die Vorverarbeitungsskripte erwarten die Bilder nach Tierart sortiert in `data/raw/` und die Verzeichnisnamen müssen den Klassennamen entsprechen. Der Ordner `data/raw/` muss manuell erstellt und mit Daten gefüllt werden.
 
 ## **$\color{blue}{Workflow: Ausführung der Pipeline}$**
 <div align="justify">
