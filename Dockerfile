@@ -6,7 +6,8 @@ WORKDIR /app
 
 # 3. Requirements kopieren und installieren
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # 4. Den gesamten Projektcode (App, Modell, Logo, Config) in den Container kopieren
 #    assume training has been performed in git-root
