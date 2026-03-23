@@ -41,6 +41,8 @@ from sklearn.utils import class_weight # Für die Berechnung der Klassengewichte
 # ===== Einstellung
 current_dir = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.abspath(os.path.join(current_dir, '../../data/nabu_split/')) # Pfad zum Trainingsdatensatz
+MODEL_PATH = os.path.abspath(os.path.join(current_dir, '../../models/final_nabu_resnet.keras')) # Pfad zum Modell
+os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
 
 # Legt die Bildgröße fest (Standard: 224x224 Pixel)
 IMG_SIZE = (224, 224)
@@ -356,7 +358,7 @@ def main():
     # Speichert das finale Modell nach dem Training
     print("Speichere Modell...")
     # Speichert im aktuellen Ordner
-    model.save('final_nabu_resnet.keras')
+    model.save(MODEL_PATH)
 
     # Historien zusammenfügen für die Auswertung
     acc = history_head.history['accuracy'] + history_fine.history['accuracy']
@@ -379,4 +381,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

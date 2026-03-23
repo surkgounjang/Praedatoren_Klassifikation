@@ -6,11 +6,12 @@ WORKDIR /app
 
 # 3. Requirements kopieren und installieren
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --root-user-action --upgrade pip && \
+    pip install --no-cache-dir --root-user-action -r requirements.txt
 
 # 4. Den gesamten Projektcode (App, Modell, Logo, Config) in den Container kopieren
 #    assume training has been performed in git-root
-COPY best_model.keras model.keras
+COPY models/final_nabu_resnet.keras model.keras
 COPY src/04_deployment/.config .streamlit/config.toml
 COPY logo.jpg src/04_deployment/streamlit_app.py .
 

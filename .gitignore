@@ -8,8 +8,10 @@ __pycache__/
 4_nabu_regrouped/
 5_nabu_split/
 batch_test/
+evaluation/
+data/
 webdesign/
-model/
+models/
 phase3_4/
 reports/
 training_history/
