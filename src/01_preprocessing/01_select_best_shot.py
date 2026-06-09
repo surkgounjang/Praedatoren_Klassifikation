@@ -1,6 +1,6 @@
-# Erstellt: 00.00.2025
+# Erstellt: 22.11.2025
 # Auswahl des besten Bildes aus Serienaufnahmen (Keyframe Extraction)
-# Update: 00.06.2026
+# Update: 09.06.2026
 
 import os
 import shutil
