@@ -1,5 +1,5 @@
 # Code zum Zuschneiden der Metadaten (Bilder)
-# Update:
+# Update: 14.06.2026
 
 import os
 from pathlib import Path
