@@ -1,5 +1,5 @@
 """
-Geburt: 09.12.2025
+Erstellt: 09.12.2025
 
 Beschreibung:
 Dieses Skript teilt den Datensatz in
@@ -7,88 +7,104 @@ Dieses Skript teilt den Datensatz in
 - Test (10%),
 - Validation (10%)
 
-Änderungen gemäß Feedback:
-1. Verwendung von 'argparse' für flexible Pfadeingaben.
-2.'os.makedirs(exist_ok=True)' ersetzt manuelle Existenzprüfung.
-
-Verwendung (Terminal)
-python split_dataset_v2.py --input nabu_regrouped --output nabu_split
+Update: 17.06.2026
+- Dieses Skript teilt den Datensatz dynamisch basierend auf der tatsächlichen Anzahl der Bild in jedem Tierarten-Ordner.
 """
 
 import os
-import shutil
 import random
-import argparse
-import sys
+import shutil
+from pathlib import Path
 
 # Standard-Einstellung
-DEFAULT_INPUT = os.path.join(os.path.dirname(__file__), '../../data/final/')
-DEFAULT_OUTPUT = os.path.join(os.path.dirname(__file__), '../../data/nabu_split/')
+SRC_PATH = Path(os.getcwd())
+PROJECT_PATH = SRC_PATH.parent.parent
 
-TRAIN_RATIO = 0.8 # Train (80%)
-TEST_RATIO = 0.1 # Test (10%)
-VAL_RATIO = 0.1 # Validation (10%)
+INPUT_PATH = PROJECT_PATH / 'data' / 'final'
+OUTPUT_PATH = PROJECT_PATH / 'data' / 'split'
 
-def split_dataset(input_folder, output_folder):
-    # Eingabeordner prüfen
-    if not os.path.exists(input_folder):
-        print(f"Fehler: Eingabeordner '{input_folder}' nicht gefunden.")
-        sys.exit(1)
+def dynamic_split_dataset(input_folder, output_folder):
+    # Prüfen, ob der Eingabeordner existiert.
+    if not input_folder.exists():
+        raise FileNotFoundError(f"Der Eingabeordner wurde nicht gefunden: {input_folder}")
 
-    # Klassen (Tierarten) auflisten
-    classes = []
-    for file in os.listdir(input_folder):
-        if os.path.isdir(os.path.join(input_folder, file)):
-            classes.append(file)
-    classes.sort() # Alphabetisch sortieren
+    # Prüfen, ob der Ausgabeordner existiert.from
+    if not output_folder.exists():
+        print(f"Fehler: Der Ausgabeordner wurde nicht gefunden: {output_folder}")
+        # Falls der Ausgabeordner nicht existiert, wird er angelegt.
+        output_folder.mkdir(parents=True, exist_ok=True)
+        print("Der Ausgabeordner wird neu erstellt.")
+        print("\n")
 
-    print(f"Starte Datensplit (8:1:1) für {len(classes)} Tierarten.")
-    print(f" Quelle: {input_folder} -> Ziel: {output_folder}")
-    print("_" * 60)
+    # sorted: Aufsteigend sortieren
+    # Z.B. andere, austernfischer, fuchs usw.
+    classes = sorted([d for d in input_folder.iterdir() if d.is_dir()])
 
-    for class_name in classes:
-        src_dir = os.path.join(input_folder, class_name)
+    print("-" * 30)
+    print(f"Starte Datensplit für {len(classes)} Tierarten")
+    print("Die Aufteilung passt sich automatisch der Anzahl der Bilder an.")
+    print("-" * 30)
 
-        # Nur Bilddateien sammeln
-        images = []
-        for image in os.listdir(src_dir):
-            if image.lower().endswith(('.png', '.jpg', '.jpeg')):
-                images.append(image)
-
-        random.shuffle(images) # Zufällig mischen
+    for class_dir in classes:
+        images = [img for img in class_dir.rglob("*") if img.name.lower().endswith((".jpg", ".jpeg", ".png"))]
         count = len(images)
 
-        # Generalisierte Berechnung der Split-Größe nach Ratio
-        n_test = int(count * TEST_RATIO)
-        n_val = int(count * VAL_RATIO)
-        n_train = count - n_test - n_val
+        # Wenn keine Bild vorhanden sind,
+        # gehe zum nächsten Ordner (class_dir)
+        if count < 3:
+            print(f"Überspringen: {class_dir} har nur {count} Bilder (Minimum ist 3).")
+            continue
 
-        # Zuweisung
+        random.shuffle(images)
+
+        # ==========
+        # Automatischer Verteilungsalgorithmus
+        # basierend auf der Dateianzahl.
+        # Mindestens 3 Bilder.
+        # ==========
+        if count >= 10:
+            n_test = int(count * 0.1)           # test: 10%
+            n_val = int(count * 0.1)            # validation: 10%
+            n_train = count - n_test - n_val    # train: 80%
+        elif count >= 4:
+            n_test = 1
+            n_val = 1
+            n_train = count -2
+        else:
+            n_test = 1
+            n_val = 1
+            n_train = 1
+
         split_map = {
-            "train" : images[0 : n_train],
-            "test" : images[n_train : n_train + n_test],
-            "validation" : images[n_train + n_test :]
+            'train': images[:n_train],
+            'test': images[n_train:n_train+n_test],
+            'val': images[n_train+n_test:]
         }
 
-        print(f"{class_name}: {count}: Bilder -> Train={n_train}, Test={n_test}, Validation={n_val}")
+        # Statusausgabe
+        # ljust(width, fillcahr): Left Justify
+        print(f"{class_dir.name.ljust(15)} | Gesamt: {str(count).ljust(4)} | -> Train={n_train} | Test={n_test} | Val={n_val}")
 
-        # Kopieren
         for split_type, file_list in split_map.items():
-            dest_dir = os.path.join(output_folder, split_type, class_name)
-            os.makedirs(dest_dir, exist_ok=True)
-            for file in file_list:
-                shutil.copy2(os.path.join(src_dir, file), os.path.join(dest_dir, file))
+            dest_dir = output_folder / split_type / class_dir.name
 
-    print("-" * 60)
-    print(f"Fertig. Bitte prüfen Sie kleine Klassen (z.B. Hermelin) manuell")
+            # Prüfen, ob dest_dir existiert.
+            if not dest_dir.exists():
+                print(f"{dest_dir} nicht gefunden.")
+                dest_dir.mkdir(parents=True, exist_ok=True)
+                print(f"{dest_dir} wird neu erstellt.")
+
+            for file in file_list:
+                shutil.copy2(file, dest_dir / file.name)
+
+    print("-" * 30)
+    print("Fertig: Alle Tierarten wurden aufgeteilt.")
+
+def main():
+    dynamic_split_dataset(INPUT_PATH, OUTPUT_PATH)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input", type=str, default=DEFAULT_INPUT)
-    parser.add_argument("--output", type=str, default=DEFAULT_OUTPUT)
-    args = parser.parse_args()
-
-    split_dataset(args.input, args.output)
+    main()
 
 
 
