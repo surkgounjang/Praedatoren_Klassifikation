@@ -1,7 +1,5 @@
-# Hinweis: Dieses Skript wurde für persönliche Lernzwecke erstellt.
-
 """
-Versionshistorie (für Dokumentationszweck)
+Versionshistorie
 
 Ursprünglicher Ansatz: 13.12.2025
 Dieses Skript trainiert ein ResNet50-Modell mittels Transfer Learning.
@@ -24,45 +22,70 @@ Integration von Class Weights, um das Ungleichgewicht der Daten (z.B.viele Fuchs
 
 Update: 12.03.2026 (Refactoring auf Keras 3 Standard)
 Umstellung im gesamten Skript: Ersetzt von tf.kears durch das keras-Paket.
+
+Update: 18.06.2026
 """
+# Für Betriebssystem-Operationen (z.B. Dateipfade)
+import os
+from pathlib import Path
 
-import os # Für Betriebssystem-Operationen (z.B. Dateipfade)
-import numpy as np # für numerische Berechnungen
+import tensorflow as tf
 
-import tensorflow as tf # tensorflow Version: 2.20.0
+# Keras-Komponenten
 import keras
-from keras import layers, optimizers, callbacks # Keras-Komponenten
+from keras import layers, optimizers, callbacks
 from keras.utils import image_dataset_from_directory
 
+# Update: 27.05.2026
+from keras.layers import BatchNormalization
+
+# Zum Erstellen von DataFrames und Speichern der Ergebnisse als CSV
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.utils import class_weight # Für die Berechnung der Klassengewichte
+
+# Für die Berechnung der Klassengewichte
+from sklearn.utils import class_weight
+
+# für numerische Berechnungen
+import numpy as np
 
 # ===== Einstellung
-current_dir = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.abspath(os.path.join(current_dir, '../../data/nabu_split/')) # Pfad zum Trainingsdatensatz
-MODEL_PATH = os.path.abspath(os.path.join(current_dir, '../../models/final_nabu_resnet.keras')) # Pfad zum Modell
-os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+SRC_DIR = Path(os.getcwd())
+PROJECT_ROOT = SRC_DIR.parent.parent
 
-# Legt die Bildgröße fest (Standard: 224x224 Pixel)
+DATA_DIR = PROJECT_ROOT / 'data' / 'split'
+
+MODEL_PATH = PROJECT_ROOT / 'models' / 'final_model.keras'
+BEST_MODEL_PATH = PROJECT_ROOT / 'best_model' / 'best_model.keras'
+
+CSV_PATH = PROJECT_ROOT / 'train_history' / 'train_history.csv'
+PLOT_PATH = PROJECT_ROOT / 'train_history' / 'train_history.svg'
+
+# Legt die Bildgröße fest (Standard: 224x 224 Pixel)
 IMG_SIZE = (224, 224)
-# Bestimmt die Anzahl der Bilder, die pro Traingsschritt verarbeitet werden
-BATCH_SIZE = 64 # 32 -> 64
+
+# Bestimmt die Anzahl der Bilder, die pro Trainingsschritt verarbeitet werden.
+BATCH_SIZE = 64
 
 # Training-Konfiguration
-EPOCHS_HEAD = 100 # Phase 1: Nur den Klassifikator trainieren 20->40
-EPOCHS_FINE = 200 # Phase 2: Fine-Tuning des Basis-Modells 80 -> 200
-
-NUM_CLASSES = 14 # 17 -> 14 Update: 12.01.2026
+# Phase 1: Nur den Klassifikator trainieren.
+EPOCHS_HEAD = 200
+# Phase 2: Fine-Tuning des Basis-Modells.
+EPOCHS_FINE = 400
 
 LEARNING_RATE_HEAD = 0.001
-LEARNING_RATE_FINE = 1e-6 # 1e-5 -> 5e-6 -> 1e-6
+LEARNING_RATE_FINE = 10e-6
 
-# ===== Mapping-Tabelle für die 'Weight Reusing'-Strategie
+# ===== Mapping-Tabelle für die 'Weight Reusing (Transfer Leaning)'-Strategie
+# die Anzahl der Tierarten.
+# WICHTIG: Wenn sich die Anzahl der Tierarten ändert,
+# muss dieser Wert unbedingt aktualisiert werden.
+NUM_CLASSES = 15
+
 # Verknüpft Tierarten mit ImageNet-IDs
-# None: keine passende ImageNet-Klasse existiert (Random Initialization)
-# Wichtig: Die Namen im IMAGENET_MAP müssen exakt mit den Ordnernamen übereinstimmen
-# bitte auf Groß-/Kleinschreibung achten
+# Wichtig!
+# Die Namen im IMAGENET_MAP (Dictionany) müssen exakt mit den Ordnernamen übereinstimmen.
+# Bitte auf Groß-/Kleinschreibung achten.
 IMAGENET_MAP = {
     "fuchs": 277,           # 277 = Red Fox, exaktes Match
     "kraehen": None,        # Kein passendes Label, Random Initialization
@@ -78,306 +101,376 @@ IMAGENET_MAP = {
     "igel": 334,            # 334 = porcupine
     "austernfischer": 143,  # 144 -> 143= oystercatcher, exaktes Match
     "hermelin": 356,        # 356 = weasel
+    "andere" : None         # Kein passendes Label, Random Initialization
 }
-# =====
 
 # ===== Hilfsfunktion: Visualisierung
+# history: ein Dictionary, das die Trainingsmetriken (accuracy, loss) enthält.
 def plot_history(history, fine_tune_epoch = None):
-    acc = history['accuracy']
-    val_acc = history['val_accuracy']
-    loss = history['loss']
+    training_accuracy = history['accuracy']
+    val_accuracy = history['val_accuracy']
+
+    training_loss = history['loss']
     val_loss = history['val_loss']
 
+    # ==========
     plt.figure(figsize=(12,6))
+    # ==========
+    # Training und Validation accuracy-Plot
+    # links
+    plt.subplot(1,2,1)
+    plt.plot(training_accuracy, label='Training Accuracy')
+    plt.plot(val_accuracy, label='Validation Accuracy')
 
-    # Accuracy Plot
-    plt.subplot(1,2,1) # links
-    plt.plot(acc, label='Training Accuracy')
-    plt.plot(val_acc, label='Validation Accuracy')
     if fine_tune_epoch:
         plt.plot(
-            [fine_tune_epoch, fine_tune_epoch], # x
-            plt.ylim(), # y
-            label='Start Fine-tuning Epoch',
-            linestyle='--',
+            # x-Achse
+            [fine_tune_epoch, fine_tune_epoch],
+            # Y-Achse
+            plt.ylim(),
+            label='Start Fine-Tuning Epoch',
+            linestyle='--'
         )
+    plt.grid(True, linestyle='--', alpha=0.6)
     plt.legend(loc='lower right')
     plt.title('Training and Validation Accuracy')
 
-    # Loss Plot
-    plt.subplot(1,2,2) # rechts
-    plt.plot(loss, label='Training Loss')
+    # ==========
+    # Training und Validation loss-Plot
+    # rechts
+    plt.subplot(1,2,2)
+    plt.plot(training_loss, label='Training Loss')
     plt.plot(val_loss, label='Validation Loss')
+
     if fine_tune_epoch:
         plt.plot(
             [fine_tune_epoch, fine_tune_epoch],
             plt.ylim(),
-            label='Start Fine-tuning Epoch',
-            linestyle='--',
+            label='Start Fine-Tuning Epoch',
+            linestyle='--'
         )
+
+    plt.grid(True, linestyle='--', alpha=0.6)
     plt.legend(loc='upper right')
     plt.title('Training and Validation Loss')
 
-    plt.savefig('train_history_plot.png')
-    print("Grafik gespeichert: train_history_plot.png")
+    plt.savefig(PLOT_PATH, format='svg', bbox_inches='tight')
+    print(f"History Grafik gespeichert: {PLOT_PATH}")
 
+    plt.close()
 
 # ===== Funktion zum Erstellen des ResNet-Modells
-# return: model
+# class_names enthält die Namen der Unterordner im Trainingsdaten-Ordner (train).
+# return: model, base_model.
+# Die Funktion gibt das base_model zurück, um es später für fine-tuning zu verwenden.
 def build_resnet(class_names):
-    # Gibt eine Statusmeldung auf der Konsole aus
-    print("Baue ResNet50-Modell mit Weight Reusing...")
+    # Gibt eine Statusmeldung auf der Konsole aus.
+    print("Baue ResNet50-Modell mit Weight Reusing (Transfer Learning)...\n")
 
-    # Step 1: Initialisierung beider Modelle (ResNet50-Modell A und ResNet50-Modell B)
-    # ResNet50-Modell A (Base Model, "Der Empfänger")
+    # =====
+    # Step 1.
+    # Initialisierung beider Modelle.
+    # ResNet50-Modell A und ResNet50-Modell B.
+
+    # Erstellt ResNet50-Modell A.
+    # base_model analysiert die Bilddaten.
     base_model = keras.applications.ResNet50(
-        weights = 'imagenet', # Nutzt vortrainierte Gewichte aus ImageNet (Transfer Learning)
-        include_top = False, # entfernt den originalen Klassifikations-Layers (Ich baue einen eigenen)
-        input_shape = (IMG_SIZE[0], IMG_SIZE[1], 3) # Erwartete Bildgröße (224x224 Pixel) und 3 Farbkanäle (RGB)
+        # Nutzt vortrainierte Gewichte aus ImageNet (Transfer Learning)
+        weights='imagenet',
+        # entfernt den originalen Klassifikator (Head)-Layers
+        include_top=False,
+        # Erwartete Bildgröße und 3 Farbkanäle (RGB)
+        # input_shape=(224,224,3)
+        input_shape=(IMG_SIZE[0], IMG_SIZE[1], 3)
     )
 
-    # WICHTIG: Zuerst einfrieren (Freeze), um die vortrainierten Merkmale nicht zu zerstören
+    # WICHTIG.
+    # Zuerst einfrieren (freeze), um die vortrainierten Merkmale nicht zu zerstören.
     base_model.trainable = False
 
-    # Lädt ein zweites ResNet50-Modell (diesmal MIT Top-Layer) als Referenz
-    # ResNet50-Modell B (Reference Model, "Der Wissensspender")
-    print("Extrahiere Gewichte aus ResNet50-Referenzmodell...")
+    # Erstellt ResNet50-Modell B
+    # Reference Model, sogenannt 'Der Wissensspender'
     ref_model = keras.applications.ResNet50(
-        weights = 'imagenet',
-        include_top = True # Lädt das Modell mit dem Klassifikations-Kopf (um Gewicht zu extrahieren)
+        weights='imagenet',
+        # Lädt das Modell mit dem Klassifikator (Head)-Layers,
+        # um Gewicht zu extrahieren.
+        include_top=True
     )
 
-    # Extrahiert die Gewichte (Weights) des letzten Layers (shape: 2048x1000)
+    # ==========
+    print("Extrahiert die Gewichte des letzten Layers...\n")
+    # get_weights()[0]: Gewichte
     imagenet_weights = ref_model.layers[-1].get_weights()[0]
-    # Extrahiert die Bias-Werte (Biases) des letzten Layers (shape: 1000)
+    # get_weights()[1]: Bias-Werte
     imagenet_bias = ref_model.layers[-1].get_weights()[1]
 
-    # Erstellt leere Matrizen für die neuen Gewichte (shape: 2048x17)
-    # 2048: Merkmale. Ein Beispiel dafür: Sind die Ohren spitz?
-    new_weights = np.zeros((2048, len(class_names))) # ein NumPy-Array (Matrix) mit 2048 Zeilen und 17 Spalten
-    # Erstellt leere Matrizen für die neuen Bias-Werte
+    # Erstellt leere Matrizen für die neuen Gewichte.
+    # shape: 2048 x len(class_names)
+    # 2048: Merkmale von Tierart.
+    new_weights = np.zeros((2048, len(class_names)))
+    # Erstellt leere Matrizen für die neuen Bias-Werte.
     new_bias = np.zeros(len(class_names))
+    # ==========
 
-    # Gibt eine Überschrift für die folgende Tabelle aus
-    print("-"*50)
-    print(f"{'NABU Klasse':<20} | {'Strategie':<20} | {'ImageNet-ID'}")
-    print("-"*50)
+    # =====
+    # Step 2.
+    # Iteration über alle Tierarten und Prüfung der IMAGENET_MAP-Tabelle.
 
-    # Step 2: Iteration über alle Tierarten und Prüfung der IMAGENET_MAP-Tabelle
-    # Schleife über alle Tierarten, um die Gewichte zuzuweisen
+    # Gibt eine Überschrift für die folgende Tabelle aus.
+    print("-" * 50)
+    print(f"{'Tierart':<20} | {'Strategie':<40} | {'ImageNet-ID'}")
+    print("-" * 50)
+
     for i, class_name in enumerate(class_names):
-        # Mapping prüfen
+        # class_name prüfen
         if class_name not in IMAGENET_MAP:
-            raise ValueError(f"Fehler: Klasse '{class_name}' nicht in IMAGENET_MAP gefunden.")
+            raise ValueError(f"Fehler: Tierart {class_name} nicht in IMAGENET_MAP gefunden.")
 
-        # Sucht die passende ImageNet-ID aus IMAGENET_MAP
-        taget_id = IMAGENET_MAP[class_name] # z.B fuchs -> 277
+        # Sucht die passende ImageNet-ID aus IMAGENET_MAP.
+        # z.B. fuchs → 277.
+        imagenet_id = IMAGENET_MAP[class_name]
 
-        # Wenn eine passende ID gefunden wurde (Gewichtswiederverwendung)
-        if taget_id is not None:
-            # Step 3: Bei Vorhandensein einer ImageNet-ID: Zugriff auf den letzten Layer von ResNet50-Modell B
-            # Kopiert die Gewichte von ImageNet in meiner Modell
-            new_weights[:, i] = imagenet_weights[:, taget_id]
-            # Kopiert den Bias-Wert von ImageNet in meinen Modell
-            new_bias[i] = imagenet_bias[taget_id]
-            print(f"{class_name:<20} | {'Weight Reusing':<25} | {taget_id}")
-        # Wenn keine ID gefunden wurde (Random Initialization)
+        if imagenet_id is not None:
+            # kopiert die Gewichte von imagenet_weights in new_weights.
+            new_weights[:, i] = imagenet_weights[:, imagenet_id]
+            # kopiert den Bias-Wert von imagenet_bias in new_bias.
+            new_bias[i] = imagenet_bias[imagenet_id]
+            print(f"{class_name:<20} | {'Weight Reusing':<40} | {imagenet_id}")
         else:
-            # Gibt Status "Random Initialization" auf der Konsole aus"
-            print(f"{class_name:<20} | {'Random Initialization':<25} | {'-'}")
-            # Initialisiert die Gewichte mit kleinen Zufallswerten (Normalverteilung)
-            new_weights[:,i] = np.random.normal(0,0.01,(2048,))
+            # Wenn eine passende ImageNet-ID gefunden wurde,
+            # imagenet_id == None
+            # initialisiert die Gewichte mit kleinen Zufallswerten (Normalverteilung)
+            new_weights[:, i] = np.random.normal(0,0.01,(2048,))
+            print(f"{class_name:<20} | {'Random Initialization':<40} | {'-'}")
 
-    # Git einen Trennlinie aus
-    print("-"*50)
+    print("\n")
+    print("-" * 50)
 
-    # Daten Augmentation
-    data_augmentation = keras.Sequential([
-        layers.RandomFlip('horizontal'),
-    ], name="data_augmentation")
-
-    # Definiert den Input-Layer des Modells (Bildgröße + 3 RGB)
-    inputs = keras.Input(shape=(IMG_SIZE[0], IMG_SIZE[1], 3))
-
-    x = data_augmentation(inputs)
-
-    # Wendet die ResNEt50 auf die Bilder an
-    x = keras.applications.resnet50.preprocess_input(x)
-    # Leitet die Daten durch das Basis-Modell
-    x = base_model(x, training=False) # training=False: Jetzt ist keine Lernzeit (Training), sondern Prüfungszeit
-    # Reduziert die Dimensionen durch Global Average Pooling (2048 Feature)
-    x = layers.GlobalAveragePooling2D()(x)
-    # Fügt Dropout hinzu, um Overfitting zu verhindern
-    x = layers.Dropout(0.5)(x) # 0.2 -> 0.5
-
-    # Erstellt den Output-Layer mit Neuronen
-    # 'softmax' wandelt die Ausgabe in Wahrscheinlichkeit um
-    output = layers.Dense(NUM_CLASSES, activation='softmax', name='custom_head')(x)
-
-    # Baut das Modell zusammen (Input -> Output)
-    model = keras.Model(inputs, output)
-
-    # Setzt die manuell vorbereiteten Gewicht (Weigt Reusing) in den Output-Layer ein
-    model.get_layer('custom_head').set_weights([new_weights, new_bias])
-
-    print("Modell erstellt.")
-    # Gibt das gertige Modell zurück.
-    # Gibt auch das base_model zurück, um es später für Fine-Tuning zu verwenden.
-    return model, base_model
-
-# ===== Funktion main()
-def main():
-    # Zweck: Lädt den Trainingsdatensatz aus dem Ordner
-    # Ausgabe: Erstellt ein tf.data.Dataset für Training
-    # Verwendet die Namen der Unterordner automatisch als Labels
-    print("Lade Trainingsdatensatz...")
-    train_ds = image_dataset_from_directory(
-        os.path.join(DATA_DIR, 'train'),    # Pfad zum Trainingsdatensatz
-        image_size = IMG_SIZE,              # Bildgröße (224x224 Pixel) ohne 3 RGB
-        batch_size = BATCH_SIZE,            # Batch-Größe
-        shuffle = True                      # Shuffle der Bilder (Wichtig: Bilder zufällig mischen
+    # =====
+    # Datenaugmentation:
+    # Künstliche Erweiterung der Trainingsdaten, um Overfitting zu vermeiden.
+    print("Konfiguriere Data Augmentation...")
+    data_augmentation = keras.Sequential(
+        [layers.RandomFlip('horizontal')],
+        name='data_augmentation'
     )
-
-    # Lädt den Validierungsdatensatz aus dem Ordner
-    print("Lade Validierungsdatensatz...")
-    val_ds = image_dataset_from_directory(
-        os.path.join(DATA_DIR, 'validation'),  # Pfad zum Validierungsdatensatz
-        image_size = IMG_SIZE,          # Bildgroße (224x224 Pixel) ohne 3 RGB
-        batch_size = BATCH_SIZE,
-        shuffle = False                 # Validierung muss nicht gemischt werden
-    )
-
-    # Speichert die Ordnernamen aud dem Datensatz
-    class_names = train_ds.class_names
-    print(f"Klassen gefunden: {class_names}")
-
-    # Optimiert die Datenpipeline für Performance (caching/Prefetching)
-    train_ds = train_ds.prefetch(buffer_size=tf.data.AUTOTUNE)
-    val_ds = val_ds.prefetch(buffer_size=tf.data.AUTOTUNE)
-
-    # ===== Berechnung der Class Weights
-    print("\n--- Berechnung der Class Weights ---")
-    print("Sammle Labels für die Gewichtung...")
-
-    # Da Dataset ein Generator ist,
-    y_train_all = []
-
-    for images, labels in train_ds:
-        y_train_all.extend(labels.numpy())
-
-    y_train_all = np.array(y_train_all)
-
-    # Berechne Gewicht: 'balanced' sogt dafür, dass seltene Klassen höhere Gewichte bekommen
-    class_weights = class_weight.compute_class_weight('balanced',
-                                                      classes=np.unique(y_train_all),
-                                                      y=y_train_all)
-
-    # Konvertierung in Dictionary Format {0: 1.5, 1: 0.8, ...}
-    class_weight_dict = dict(enumerate(class_weights))
-
-    print("Class Weights:", class_weight_dict)
-    print("--------------------------------")
+    print("Data Augmentaion Pipeline erfolgreich erstellt.")
     # =====
 
-    # Ruf model, base_model auf
-    model, base_model = build_resnet(class_names)
+    # =====
+    # Definiert den Input-Layer des Modells
+    print("Erstelle den Input-Layer...")
+    inputs = keras.Input(shape=(IMG_SIZE[0], IMG_SIZE[1], 3))       # (224 Pixel, 224 Pixel, 3 RGB)
 
-    # Phase 1: Training des Klassifikators (Head)
-    print("Phase 1: Training des Klassifikators (Head)...")
+    x = data_augmentation(inputs)
+    # Wendet die ResNet50 auf die Bilder an.
+    x = keras.applications.resnet50.preprocess_input(x)
+    # base_model analysiert die Bilddaten.
+    x = base_model(x, training=False)
+    x = layers.GlobalAveragePooling2D()(x)
+    # Fügt Dropout hinzu, um Overfitting zu vermeiden.
+    x = layers.Dropout(0.5)(x)
 
-    # Konfiguriert das Modell für das Training
-    model.compile(
-        # Verwendet den Adam-Optimierer mit einer niedrigen Lernrate
-        optimizer = optimizers.Adam(learning_rate=LEARNING_RATE_HEAD),
-        # Verwendet Sparse Categorical Crossentropy als Verlustfunktion
-        loss = 'sparse_categorical_crossentropy',
-        # Überwacht die Genauigkeit (accuracy) wärend des Trainings
-        metrics = ['accuracy']
+    # Erstellt den Output-Layer des Modells.
+    # softmax wandelt die Ausgabe in Wahrscheinlichkeit um.
+    output = layers.Dense(NUM_CLASSES, activation='softmax', name='custom_head')(x)
+
+    # Baut das Modell zusammen.
+    model = keras.Model(inputs, output)
+
+    # Setzt die manuell vorbereiteten Gewichte in den output-layer ein.
+    model.get_layer('custom_head').set_weights([new_weights, new_bias])
+
+    print("Keras Modell erstellt.")
+    return model, base_model
+
+
+def main():
+    train_dir = DATA_DIR / 'train'
+    val_dir = DATA_DIR / 'val'
+
+    # Prüfen, ob train_dir existiert.
+    if not train_dir.is_dir():
+        raise FileNotFoundError(f"{train_dir} nicht gefunden.")
+    # Prüfen, ob val_dir existiert.
+    if not val_dir.is_dir():
+        raise FileNotFoundError(f"{val_dir} nicht gefunden.")
+
+    print("Lade Trainingsdatensatz...")
+    # Lädt den Trainingsdatensatz aus dem Ordner 'train'
+    train_ds = image_dataset_from_directory(
+        train_dir,                  # Pfad zum Trainingsdatensatz
+        image_size=IMG_SIZE,        # Bildgröße: 224x224Pixel ohne 3 RGB
+        batch_size=BATCH_SIZE,      # Batchgröße
+        shuffle=True                # Bilder zufällig mischen
     )
 
-    # Startet den Trainingsprozess
-    print("Starte Training...")
-    history_head = model.fit(
-        train_ds,                           # Trainingsdaten
-        validation_data = val_ds,           # Validierungsdaten
-        epochs = EPOCHS_HEAD,               # Maximale Anzahl der Epochen
-        class_weight = class_weight_dict,   # Gewichtung der Klassen
-        callbacks = [
-            # EarlyStopping: Stoppt, wenn val_loss 5 Epochen lang nicht sinkt
-            keras.callbacks.EarlyStopping(patience=5, restore_best_weights=True),
+    # Lädt den Validierungsdatensatz aus dem Ordner 'val'
+    validation_ds = image_dataset_from_directory(
+        val_dir,
+        image_size=IMG_SIZE,
+        batch_size=BATCH_SIZE,
+        shuffle=False               # Validierung muss nicht gemischt werden.
+    )
+    print("-"*50)
+
+    # Speichert die Ordnernamen aus dem Ordner 'train'
+    class_names = train_ds.class_names
+    pad = len(str(len(class_names)))
+    print("\n===== Gefundene Tierarten =====")
+    for i, class_name in enumerate(class_names):
+        print(f"{i:{pad}d} | {class_name}")
+
+    # Optimiert die Datenpipeline für Performance
+    train_ds = train_ds.prefetch(buffer_size=tf.data.AUTOTUNE)
+    validation_ds = validation_ds.prefetch(buffer_size=tf.data.AUTOTUNE)
+
+    # ===== Berechnung der Class Weights. =====
+    # Class Weights: Gleicht ein Ungleichgewicht in train_ds aus.
+    # Gibt seltenen Tierarten ein höheres Gewicht.
+    print("\n===== Berechnung der Class Weights =====")
+
+    train_all_labels = []
+    # train_ds liefert pro Iteration ein Tuple (images, labels)
+    for _, labels in train_ds:
+        train_all_labels.extend(labels.numpy())
+
+    train_all_labels =np.array(train_all_labels)
+
+    # Berechne Class Weights
+    class_weights = class_weight.compute_class_weight(
+        'balanced',
+        classes=np.unique(train_all_labels),
+        y=train_all_labels
+    )
+
+    # Konvertierung in Dictionary-Format
+    class_weight_dictionary = dict(enumerate(class_weights))
+
+    for tierart_id, weight in class_weight_dictionary.items():
+        tierart_name = class_names[tierart_id]
+        print(f"Tierart ID: {tierart_id:2d} | Tierart Name: {tierart_name:<20} | Weight: {weight}")
+    print("-"*50)
+
+    # ==================================================
+    #
+    # ==================================================
+
+    # ===== Phase 1: Nur den Klassifikator(Head)- Layer trainieren
+    print("\n=== Phase 1: Nur den Klassifikator (model) trainieren ===")
+    # Erstellt base_model und model
+    model, base_model = build_resnet(class_names)
+
+    # Konfiguriert 'model' für das Training.
+    # 'model.compile' legt die Trainingsregel für 'model' fest.
+    model.compile(
+        # Verwendet den Adam-Optimierer mit einer niedrigen Lernrate.
+        optimizer=optimizers.Adam(learning_rate=LEARNING_RATE_HEAD),
+        # Sparse Categorical Crossentropy: Verlustfunktion
+        loss='sparse_categorical_crossentropy',
+        # Überwacht die Genauigkeit (accuracy) während des Trainings
+        metrics=['accuracy']
+    )
+
+    # Start den Head-Trainingsprozess
+    print("\n--- Starte Training des Klassifikators (Head)... ---")
+    head_training_history = model.fit(
+        train_ds,
+        validation_data=validation_ds,
+        epochs=EPOCHS_HEAD,
+        class_weight=class_weight_dictionary,
+        callbacks=[
+            # Stopp, wenn val_loss 5 Epochen lang nicht mehr verbessert wird.
+            callbacks.EarlyStopping(patience=5, restore_best_weights=True)
         ]
     )
 
     # Phase 2: Fine-Tuning
-    print("Phase 2: Fine-Tuning...")
+    # base_model lernt die spezifischen Merkmale meiner Bilder.
+    print("\n=== Phase 2: Fine-Tuning (base_model)... ===")
 
-    # Basis-Modell auftauen
+    # base_model enteisen.
+    # Dieser Befehl entsperrt alles in base_model.
+    # z.B. die oberen Schichten, die unteren Schichten und alle BatchNormalization-Schichten.
     base_model.trainable = True
 
-    # Ich will nicht alles trainieren, sondern nur die oberen Schichten.
-    # ResNet 50 hat viele Layer.
-    # Ich friere alle ein, außer die letzten 30.
+    # Aber ich will nicht alles trainieren.
+    # Ich friere alle ein, außer die letzte 30 Layer.
     fine_tune_at = len(base_model.layers) - 30
 
+    # die unteren Schichten (Bottom Layers) und
+    # die darin enthaltenen unteren BN-Schichten werden eingefroren.
     for layer in base_model.layers[:fine_tune_at]:
         layer.trainable = False
 
-    # Scheduler: Wenn Val-Loss stagniert, Lernrate reduzieren
-    reduce_lr = callbacks.ReduceLROnPlateau(
+    # Update: 27.05.2026
+    # in den geöffneten oberen Schichten werden die BN (BatchNormalization)-Schichten wieder eingefroren.
+    for layer in base_model.layers[fine_tune_at:]:
+        if isinstance(layer, BatchNormalization):
+            layer.trainable = False
+
+    # Scheduler
+    # Wenn Validation-Loss stagniert, Lernrate reduzieren.
+    reduce_learning_rate = callbacks.ReduceLROnPlateau(
         monitor='val_loss',
         factor=0.2,
-        patience=3,
+        patience=5,
         min_delta=1e-7,
-        verbose=1,
+        verbose=1
     )
 
-    early_stopping = callbacks.EarlyStopping(patience=10, restore_best_weights=True)
-    checkpoint = callbacks.ModelCheckpoint('best_model.keras', save_best_only=True)
-
-    # Modell neu kompilieren mit sehr niedriger Lernrate
-    # Eine zu hohe Lernrate würde das vortrainierte Wissen zerstören.
     model.compile(
-        optimizer = optimizers.Adam(learning_rate=LEARNING_RATE_FINE, epsilon=1e-08),
-        loss = 'sparse_categorical_crossentropy',
-        metrics = ['accuracy']
+        optimizer=optimizers.Adam(learning_rate=LEARNING_RATE_FINE),
+        loss='sparse_categorical_crossentropy',
+        metrics=['accuracy']
     )
 
-    # Epochen korrekt fortsetzen
-    # Initail epoch muss exakt der letzte Epoch der Phase 1 sein
-
-    history_fine = model.fit(
+    print("\n Start des Fine-Tuning... ---")
+    fine_tuning_training_history = model.fit(
         train_ds,
-        epochs = EPOCHS_HEAD + EPOCHS_FINE,
-        validation_data = val_ds,
-        initial_epoch = history_head.epoch[-1] + 1,
-        class_weight = class_weight_dict,               # Gewichtung der Klassen beim Fine-Tuning
-        callbacks = [
-            early_stopping, checkpoint, reduce_lr]
+        epochs=EPOCHS_HEAD + EPOCHS_FINE,
+        validation_data=validation_ds,
+        initial_epoch=head_training_history.epoch[-1] + 1,
+        callbacks=[
+            callbacks.EarlyStopping(patience=5, restore_best_weights=True),
+            callbacks.ModelCheckpoint(BEST_MODEL_PATH, save_best_only=True),
+            reduce_learning_rate
+        ]
     )
 
-    # Speichert das finale Modell nach dem Training
-    print("Speichere Modell...")
-    # Speichert im aktuellen Ordner
+    # Speichert das finale Modell
+    print("\nSpeichere finales Modell...")
+    if not MODEL_PATH.parent.is_dir():
+        MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     model.save(MODEL_PATH)
+    print(f"final_model gespeichert : {MODEL_PATH}")
+
+    #==================================================
 
     # Historien zusammenfügen für die Auswertung
-    acc = history_head.history['accuracy'] + history_fine.history['accuracy']
-    val_acc = history_head.history['val_accuracy'] + history_fine.history['val_accuracy']
-    loss = history_head.history['loss'] + history_fine.history['loss']
-    val_loss = history_head.history['val_loss'] + history_fine.history['val_loss']
+    # accuracy
+    acc = head_training_history.history['accuracy'] + fine_tuning_training_history.history['accuracy']
+    val_acc = head_training_history.history['val_accuracy'] + fine_tuning_training_history.history['val_accuracy']
+
+    # loss
+    loss = head_training_history.history['loss'] + fine_tuning_training_history.history['loss']
+    val_loss = head_training_history.history['val_loss'] + fine_tuning_training_history.history['val_loss']
 
     history_dict = {
-        'accuracy': acc,
-        'val_accuracy': val_acc,
-        'loss': loss,
-        'val_loss': val_loss,
+        'accuracy':acc,
+        'val_accuracy':val_acc,
+        'loss':loss,
+        'val_loss':val_loss
     }
 
-    pd.DataFrame(history_dict).to_csv('history.csv', index=False)
+    if not CSV_PATH.parent.is_dir():
+        CSV_PATH.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(history_dict).to_csv(CSV_PATH, index=False)
+    print(f"CSV-Datei gespeichert : {CSV_PATH}")
 
     # Grafik plotten
-    plot_history(history_dict, fine_tune_epoch=history_head.epoch[-1] +1)
-    print("Trainingsverlauf als CSV gespeichert.")
+    plot_history(history_dict, fine_tune_epoch=head_training_history.epoch[-1]+1)
+    print(f"Grafik gespeichert:{PLOT_PATH}")
 
 if __name__ == "__main__":
     main()
